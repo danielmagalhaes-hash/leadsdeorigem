@@ -29,6 +29,7 @@ class Contato:
     email: Optional[str]
     criado_em: str
     utms_propriedade: UTMs = field(default_factory=UTMs)
+    properties: dict = field(default_factory=dict)
 
 
 @dataclass

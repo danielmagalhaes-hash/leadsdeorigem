@@ -1,5 +1,6 @@
 import time
 import logging
+from datetime import datetime, timezone, timedelta
 from typing import Generator
 import httpx
 from src.config import settings
@@ -56,6 +57,18 @@ def _extrair_utms_de_metadata(meta: dict) -> UTMs:
     )
 
 
+_BRT = timezone(timedelta(hours=-3))
+
+
+def _range_utc_do_dia_brt(criado_em_utc: str) -> tuple[str, str]:
+    """Converte criado_em (UTC ISO) para o intervalo UTC equivalente ao dia BRT."""
+    fmt = "%Y-%m-%dT%H:%M:%S+00:00"
+    dt_brt = datetime.fromisoformat(criado_em_utc).astimezone(_BRT)
+    inicio = datetime(dt_brt.year, dt_brt.month, dt_brt.day, tzinfo=_BRT).astimezone(timezone.utc)
+    fim = inicio + timedelta(days=1)
+    return inicio.strftime(fmt), fim.strftime(fmt)
+
+
 class KlaviyoClient:
 
     def listar_contatos(self, start_date: str, end_date: str) -> Generator[Contato, None, None]:
@@ -83,6 +96,59 @@ class KlaviyoClient:
                     utms_propriedade=_extrair_utms_de_propriedades(props),
                 )
             url = (dados.get("links") or {}).get("next")
+            params = {}
+
+    def buscar_eventos_no_dia(self, klaviyo_id: str, criado_em_utc: str) -> list[dict]:
+        """Busca eventos do perfil filtrados ao dia BRT de criação, ordenados por datetime ASC."""
+        inicio, fim = _range_utc_do_dia_brt(criado_em_utc)
+        url = f"{_BASE}/events/"
+        params: dict = {
+            "filter": f'equals(profile_id,"{klaviyo_id}"),greater-than(datetime,{inicio}),less-than(datetime,{fim})',
+            "sort": "datetime",
+            "page[size]": 50,
+            "fields[event]": "datetime,event_properties",
+            "include": "metric",
+            "fields[metric]": "name",
+        }
+        eventos: list[dict] = []
+        while url:
+            dados = _get(url, params)
+            metricas = {m["id"]: m["attributes"]["name"] for m in dados.get("included", [])}
+            for ev in dados.get("data", []):
+                mid = (ev.get("relationships", {}).get("metric", {}).get("data") or {}).get("id")
+                ev["_nome"] = metricas.get(mid, "")
+            eventos.extend(dados.get("data", []))
+            url = (dados.get("links") or {}).get("next")
+            params = {}
+        return eventos
+
+    def paginar_contatos(
+        self, start_date: str, end_date: str, cursor_url: str | None = None
+    ) -> Generator[tuple[list[Contato], str | None], None, None]:
+        """Yields (lista_perfis, proximo_cursor) página por página. Suporta resume via cursor_url."""
+        from datetime import date as _date
+        fim = _date.fromisoformat(end_date) + timedelta(days=1)
+        url: str | None = cursor_url or f"{_BASE}/profiles/"
+        params: dict = {} if cursor_url else {
+            "filter": f"greater-than(created,{start_date}T03:00:00+00:00),less-than(created,{fim.isoformat()}T03:00:00+00:00)",
+            "page[size]": _PAGE_SIZE,
+            "fields[profile]": "email,created,properties",
+        }
+        while url:
+            dados = _get(url, params)
+            perfis = [
+                Contato(
+                    klaviyo_id=item["id"],
+                    email=item["attributes"].get("email"),
+                    criado_em=item["attributes"].get("created"),
+                    utms_propriedade=UTMs(),
+                    properties=item["attributes"].get("properties", {}),
+                )
+                for item in dados.get("data", [])
+            ]
+            next_url: str | None = (dados.get("links") or {}).get("next")
+            yield perfis, next_url
+            url = next_url
             params = {}
 
     def buscar_evento_mais_antigo_com_utm(self, klaviyo_id: str) -> UTMs | None:

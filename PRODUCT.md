@@ -63,7 +63,7 @@ As origens são fixas e definidas pela equipe da Minimal. O mapeamento UTM → O
 | Unassigned | UTM presente mas não mapeado para nenhuma categoria |
 | Auto Referral | Tráfego interno entre domínios da própria Minimal |
 | Email Fluxo | Leads ativados por fluxos automáticos de email (Klaviyo flows) |
-| WhatsApp | WhatsApp genérico |
+| WhatsApp | WhatsApp comunidade |
 | Comercial | Leads inseridos manualmente pelo time comercial |
 | WhatsApp Campanha | Campanhas ativas de WhatsApp |
 | WhatsApp Fluxo | Fluxos automáticos de WhatsApp |
