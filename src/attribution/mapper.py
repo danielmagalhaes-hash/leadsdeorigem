@@ -69,6 +69,19 @@ def detectar_origem_invalida(email: str | None, properties: dict) -> tuple[UTMs,
     return None
 
 
+def tem_evento_de_atribuicao(eventos: list[dict]) -> bool:
+    """True se qualquer um dos 4 tipos de evento de atribuição está presente, independente de UTM."""
+    _todos_tipos = _TIPOS_ATIVO | _TIPOS_FORM | _TIPOS_LEAD_ADS
+    for ev in eventos:
+        if ev.get("_nome") in _todos_tipos:
+            return True
+        props = ev["attributes"].get("event_properties", {})
+        landing = (props.get("$extra") or {}).get("full_landing_site") or props.get("full_landing_site")
+        if landing:
+            return True
+    return False
+
+
 def extrair_utms_de_eventos(eventos: list[dict]) -> tuple[UTMs | None, str | None, str]:
     """Aplica as 4 prioridades com short-circuit. Retorna (utms, url_conversao, metodo)."""
     if u := _buscar_em_tipos(eventos, _TIPOS_ATIVO):

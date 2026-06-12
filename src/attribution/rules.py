@@ -15,10 +15,13 @@ def _mapear(source: Optional[str], medium: Optional[str], campaign: Optional[str
     if s in ("instagram", "facebook", "ig", "fb") or (m == "social" and s in ("instagram", "facebook")):
         return "Instagram/Facebook"
 
+    if s.startswith("instagram_") or s.startswith("facebook_") or s == "threads_feed":
+        return "Instagram/Facebook"
+
     if s == "google" and "institucional" in c:
         return "Google Institucional"
 
-    if s == "google":
+    if s in ("google", "adwords"):
         return "Google"
 
     if s == "klaviyo" and m == "email" and "flow" in c:
@@ -51,6 +54,15 @@ def _mapear(source: Optional[str], medium: Optional[str], campaign: Optional[str
     if s == "comercial" or m == "comercial":
         return "Comercial"
 
+    if s == "chatgpt.com":
+        return "ChatGPT"
+
+    if s == "tik-tok":
+        return "TikTok"
+
+    if m == "colaborador":
+        return "Colaborador"
+
     return "Unassigned"
 
 
@@ -70,4 +82,7 @@ ORIGENS_VALIDAS = {
     "WhatsApp Campanha",
     "WhatsApp Fluxo",
     "Influencer",
+    "ChatGPT",
+    "TikTok",
+    "Colaborador",
 }

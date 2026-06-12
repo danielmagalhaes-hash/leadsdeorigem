@@ -15,7 +15,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from src.klaviyo.client import KlaviyoClient
 from src.klaviyo.models import Contato
-from src.attribution.mapper import atribuir_origem, extrair_utms_de_eventos, detectar_origem_invalida
+from src.attribution.mapper import atribuir_origem, extrair_utms_de_eventos, detectar_origem_invalida, tem_evento_de_atribuicao
 from src.supabase.client import SupabaseClient
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(message)s", datefmt="%H:%M:%S")
@@ -49,12 +49,14 @@ def _salvar_checkpoint(cursor: str | None) -> None:
 
 def _processar_lead(contato: Contato) -> dict:
     invalida = detectar_origem_invalida(contato.email, contato.properties)
-    if invalida:
+    if invalida and invalida[1] == "integracao_tiktok":
         utms, metodo = invalida
         url_conversao = None
     else:
         eventos = klaviyo.buscar_eventos_no_dia(contato.klaviyo_id, contato.criado_em)
         utms, url_conversao, metodo = extrair_utms_de_eventos(eventos)
+        if invalida and metodo == "sem_utm" and not tem_evento_de_atribuicao(eventos):
+            utms, metodo = invalida
 
     atribuicao = atribuir_origem(contato, utms)
     if atribuicao["metodo_atribuicao"] == "evento_mais_antigo":
