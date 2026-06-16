@@ -1,88 +1,80 @@
 from typing import Optional
 
-# Tabela de mapeamento UTM → Origem
-# Formato: lista de (condição_fn, nome_origem) avaliada em ordem.
-# Primeira regra que bater vence.
+_META_SOURCES   = frozenset({"instagram", "facebook", "fb", "facebo", "ig"})
+_WPP_FLUXO      = frozenset({"whatsapp_fluxo", "whatsapp_fluxo_ia", "fluxos_crm"})
+_EMAIL_FLUXO    = frozenset({"email_fluxo", "fluxos_crm"})
+
 
 def _mapear(source: Optional[str], medium: Optional[str], campaign: Optional[str]) -> str:
-    s = str(source or "").lower()
-    m = str(medium or "").lower()
-    c = str(campaign or "").lower()
+    s = (source or "").lower().strip()
+    m = (medium or "").lower().strip()
+    c = (campaign or "").lower().strip()
 
-    if not s and not m:
+    if not s and not m and not c:
         return "Direto"
 
-    if s in ("instagram", "facebook", "ig", "fb") or (m == "social" and s in ("instagram", "facebook")):
-        return "Instagram/Facebook"
-
-    if s.startswith("instagram_") or s.startswith("facebook_") or s == "threads_feed":
-        return "Instagram/Facebook"
-
-    if s == "google" and "institucional" in c:
+    # Google Institucional — campanha específica, prioridade máxima
+    if "c16_search_branded_exata_sr" in c:
         return "Google Institucional"
 
+    # Meta Ads — source instagram/facebook + medium cpc/paid
+    _is_meta = s in _META_SOURCES or s.startswith("instagram") or s.startswith("facebook") or s.startswith("facebo")
+    if _is_meta and ("cpc" in m or "paid" in m):
+        return "Meta Ads"
+
+    # WhatsApp — diferenciado pelo medium
+    if s == "whatsapp":
+        if m in _WPP_FLUXO:
+            return "WhatsApp Fluxo"
+        if m == "whatsapp_campanha":
+            return "WhatsApp Campanha"
+        if m == "comunidade":
+            return "WhatsApp Comunidade"
+
+    # E-mail — diferenciado pelo medium
+    if s == "email":
+        if m in _EMAIL_FLUXO:
+            return "E-mail Fluxo"
+        if m == "email_campanha":
+            return "E-mail Campanha"
+
+    # Comercial
+    if s == "comercial":
+        return "Comercial"
+
+    # Google
     if s in ("google", "adwords"):
         return "Google"
 
-    if s == "klaviyo" and m == "email" and "flow" in c:
-        return "Email Fluxo"
-
-    if m == "email" or s in ("email", "klaviyo"):
-        return "Email Campanha"
-
-    if s == "whatsapp" and "flow" in c:
-        return "WhatsApp Fluxo"
-
-    if s == "whatsapp" and m == "campaign":
-        return "WhatsApp Campanha"
-
-    if s == "whatsapp":
-        return "WhatsApp"
-
-    if s == "influencer" or m == "influencer":
-        return "Influencer"
-
-    if m in ("organic", "organico", "seo"):
-        return "Orgânico"
-
-    if m in ("social", "social-media"):
+    # Social
+    if m == "social":
         return "Social"
 
-    if s in ("auto-referral", "auto_referral") or m == "referral":
-        return "Auto Referral"
+    # Influenciadores
+    if "influencer" in m or "influenciador" in m:
+        return "Influenciadores"
 
-    if s == "comercial" or m == "comercial":
-        return "Comercial"
+    # B2B — Lead Ads (ig/fb/outros)
+    if m == "lead_ads":
+        return "B2B"
 
-    if s == "chatgpt.com":
-        return "ChatGPT"
-
-    if s == "tik-tok":
-        return "TikTok"
-
-    if m == "colaborador":
-        return "Colaborador"
-
-    return "Unassigned"
+    # Tem UTM mas não casou com nenhuma regra
+    return "Outros canais"
 
 
 ORIGENS_VALIDAS = {
+    "Meta Ads",
     "Google Institucional",
-    "Instagram/Facebook",
     "Google",
-    "Email Campanha",
-    "Direto",
     "Social",
-    "Orgânico",
-    "Unassigned",
-    "Auto Referral",
-    "Email Fluxo",
-    "WhatsApp",
-    "Comercial",
-    "WhatsApp Campanha",
+    "Influenciadores",
+    "B2B",
     "WhatsApp Fluxo",
-    "Influencer",
-    "ChatGPT",
-    "TikTok",
-    "Colaborador",
+    "WhatsApp Campanha",
+    "WhatsApp Comunidade",
+    "E-mail Fluxo",
+    "E-mail Campanha",
+    "Comercial",
+    "Outros canais",
+    "Direto",
 }

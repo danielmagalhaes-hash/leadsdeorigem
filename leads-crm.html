@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aquisição de Leads CRM · Minimal Club</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f4f6fa; --card:#fff; --border:#e6eaf0; --text:#0f1b2d; --muted:#6b7785;
+  --primary:#2563eb; --success:#10b981; --warning:#f59e0b; --danger:#ef4444;
+  --shadow:0 1px 3px rgba(15,27,45,.06),0 1px 2px rgba(15,27,45,.04);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5}
+header{background:#fff;border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.brand{font-size:18px;font-weight:700;letter-spacing:-.2px}
+.brand span{color:var(--primary)}
+.brand small{display:block;font-size:11px;color:var(--muted);font-weight:500;margin-top:2px}
+.header-actions{display:flex;gap:8px;align-items:center}
+.btn{background:var(--primary);color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{background:#f4f7fb;color:var(--text)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.goal-badge{padding:6px 12px;background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;border-radius:8px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px}
+.goal-badge .num{font-size:14px;font-weight:700}
+
+.filters{background:#fff;border-bottom:1px solid var(--border);padding:10px 28px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.filter{display:flex;flex-direction:column;gap:2px}
+.filter label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.filter select{border:1px solid var(--border);background:#fff;padding:6px 10px;border-radius:6px;font-size:12px;color:var(--text);min-width:140px;cursor:pointer}
+.filter select:focus{outline:none;border-color:var(--primary)}
+.filter input[type=date]{border:1px solid var(--border);background:#fff;padding:6px 10px;border-radius:6px;font-size:12px;color:var(--text);cursor:pointer}
+.filter input[type=date]:focus{outline:none;border-color:var(--primary)}
+.meta-input{border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:15px;font-weight:700;width:100%;color:var(--text);background:#fff;-moz-appearance:textfield}
+.meta-input::-webkit-inner-spin-button,.meta-input::-webkit-outer-spin-button{-webkit-appearance:none}
+.meta-input:focus{outline:none;border-color:var(--primary)}
+.meta-input::placeholder{font-weight:400;font-size:12px;color:var(--muted)}
+.progress-wrap{background:#f1f4f8;border-radius:6px;height:8px;overflow:hidden;margin:8px 0 4px}
+.progress-fill{height:100%;border-radius:6px;transition:width .4s ease,background .4s ease}
+
+main{padding:20px 28px;max-width:1600px;margin:0 auto;display:grid;grid-template-columns:1fr 300px;gap:18px}
+@media(max-width:1280px){main{grid-template-columns:1fr}}
+.content{display:flex;flex-direction:column;gap:18px;min-width:0}
+.alerts-rail{display:flex;flex-direction:column;gap:14px}
+.section-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:0 0 8px}
+
+.grid{display:grid;gap:14px}
+.grid-4{grid-template-columns:repeat(4,1fr)}
+.grid-2{grid-template-columns:repeat(2,1fr)}
+.grid-2-1{grid-template-columns:2fr 1fr}
+@media(max-width:1000px){.grid-4{grid-template-columns:repeat(2,1fr)}.grid-2,.grid-2-1{grid-template-columns:1fr}}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;box-shadow:var(--shadow)}
+.card-title{font-size:12px;color:var(--muted);font-weight:500;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.kpi-value{font-size:26px;font-weight:700;letter-spacing:-.5px;color:var(--text);margin-bottom:6px}
+.kpi-sub{font-size:11px;color:var(--muted)}
+.kpi-deltas{display:flex;gap:10px;font-size:11px;flex-wrap:wrap;margin-top:4px}
+.delta{display:flex;align-items:center;gap:3px;font-weight:600;padding:2px 6px;border-radius:4px}
+.delta.up{color:var(--success);background:rgba(16,185,129,.1)}
+.delta.down{color:var(--danger);background:rgba(239,68,68,.1)}
+.delta.flat{color:var(--muted);background:#f1f4f8}
+.delta-label{color:var(--muted);font-size:10px;text-transform:uppercase;font-weight:500;letter-spacing:.3px}
+.kpi-card.hero{background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff}
+.kpi-card.hero .card-title{color:rgba(255,255,255,.8)}
+.kpi-card.hero .kpi-value{color:#fff;font-size:28px}
+.kpi-card.hero .kpi-sub{color:rgba(255,255,255,.7)}
+
+.chart-box{position:relative;height:280px}
+.chart-box.sm{height:200px}
+.chart-box.lg{height:320px}
+.chart-box.heat{height:auto;min-height:200px}
+
+.toolbar{display:flex;justify-content:flex-end;gap:6px;margin-top:6px;flex-wrap:wrap}
+.toggle-btn{background:transparent;border:1px solid var(--border);padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer}
+.toggle-btn:hover{color:var(--text)}
+.toggle-btn.active{background:var(--primary);border-color:var(--primary);color:#fff}
+
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.3px}
+.tag-green{background:#d1fae5;color:#047857}
+.tag-yellow{background:#fef3c7;color:#92400e}
+.tag-red{background:#fee2e2;color:#991b1b}
+.tag-blue{background:#dbeafe;color:#1e40af}
+.tag-gray{background:#f1f4f8;color:#475569}
+
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{background:#f8fafc;text-align:left;padding:10px 12px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:700;border-bottom:1px solid var(--border);cursor:pointer;user-select:none}
+thead th:hover{color:var(--text)}
+thead th.num,tbody td.num{text-align:right;font-variant-numeric:tabular-nums}
+tbody td{padding:9px 12px;border-bottom:1px solid #f1f4f8}
+tbody tr:hover{background:#fafbfd}
+
+.heat-grid{display:grid;gap:2px;width:100%;font-size:10px}
+.heat-row{display:grid;gap:2px;align-items:center;grid-template-columns:140px 1fr}
+.heat-row-label{font-size:11px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px}
+.heat-cells{display:grid;gap:2px}
+.heat-cell{aspect-ratio:1;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:#fff;min-height:24px}
+.heat-axis{display:grid;gap:2px;font-size:9px;color:var(--muted);font-weight:600;padding-top:4px}
+.heat-axis-cell{text-align:center}
+
+.gauge-card{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px}
+.concentration-num{font-size:42px;font-weight:800;letter-spacing:-1px;line-height:1}
+.concentration-label{font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
+.concentration-leader{font-size:13px;font-weight:600;margin-top:8px}
+
+.alert{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;box-shadow:var(--shadow);border-left:4px solid var(--muted)}
+.alert.red{border-left-color:var(--danger)}
+.alert.yellow{border-left-color:var(--warning)}
+.alert.green{border-left-color:var(--success)}
+.alert h4{font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.alert h4 .pill{font-size:9px;background:#f1f4f8;color:var(--muted);padding:2px 6px;border-radius:8px}
+.alert.red h4 .pill{background:#fee2e2;color:#991b1b}
+.alert.yellow h4 .pill{background:#fef3c7;color:#92400e}
+.alert.green h4 .pill{background:#d1fae5;color:#047857}
+.alert p{font-size:11.5px;color:var(--muted);line-height:1.5}
+.alert .ctx{margin-top:6px;font-size:11px;color:var(--text);font-weight:500}
+
+.utm-tabs{display:flex;gap:4px;background:#f1f4f8;border-radius:6px;padding:3px;margin-bottom:10px;width:fit-content}
+.utm-tabs button{background:transparent;border:none;padding:5px 11px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;border-radius:4px}
+.utm-tabs button.active{background:#fff;color:var(--text);box-shadow:var(--shadow)}
+
+.legend-inline{display:flex;flex-wrap:wrap;gap:10px;font-size:10.5px;color:var(--muted);margin-top:8px}
+.legend-inline .li{display:flex;align-items:center;gap:5px}
+.legend-inline .ld{width:10px;height:10px;border-radius:3px}
+
+.channel-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+
+.baseline-info{background:#eef4ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;font-size:11.5px;color:#1e40af;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.baseline-info strong{color:#1e3a8a}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    Aquisição de Leads <span>CRM</span>
+    <small>Operação diária · Meta +50% em 90 dias</small>
+  </div>
+  <div class="header-actions">
+    <div class="goal-badge" id="hdr-meta-badge" style="display:none">
+      Meta diária: <span class="num" id="hdr-meta-daily">—</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="window.print()">Exportar</button>
+  </div>
+</header>
+
+<div class="filters">
+  <div class="filter">
+    <label>Período</label>
+    <select id="f-period">
+      <option value="7">Últimos 7 dias</option>
+      <option value="30" selected>Últimos 30 dias</option>
+      <option value="60">Últimos 60 dias</option>
+      <option value="90">Últimos 90 dias</option>
+      <option value="mtd">MTD</option>
+      <option value="custom">Personalizado</option>
+    </select>
+  </div>
+  <div class="filter" id="wrap-date-start" style="display:none">
+    <label>De</label>
+    <input type="date" id="f-date-start">
+  </div>
+  <div class="filter" id="wrap-date-end" style="display:none">
+    <label>Até</label>
+    <input type="date" id="f-date-end">
+  </div>
+  <div class="filter">
+    <label>Canal</label>
+    <select id="f-channel">
+      <option value="all" selected>Todos os canais</option>
+    </select>
+  </div>
+  <div class="filter">
+    <label>Comparativo</label>
+    <select id="f-compare">
+      <option value="prev" selected>Período anterior</option>
+      <option value="baseline">Vs Baseline</option>
+      <option value="meta">Vs Meta diária</option>
+    </select>
+  </div>
+  <div style="flex:1"></div>
+</div>
+
+<main>
+<div class="content">
+
+  <!-- ============ BLOCO 1: KPIs Topline ============ -->
+  <section>
+    <div class="section-title">1 · Estou no pace?</div>
+    <div class="grid grid-4">
+
+      <!-- Card 1: Leads no período -->
+      <div class="card kpi-card hero">
+        <div class="card-title">Leads no período</div>
+        <div class="kpi-value" id="kpi-period">—</div>
+        <div class="kpi-sub" id="kpi-period-sub" style="color:rgba(255,255,255,.7)">—</div>
+        <div class="kpi-deltas" style="margin-top:8px">
+          <span class="delta" id="kpi-period-delta">—</span>
+          <span class="delta-label" style="color:rgba(255,255,255,.6)">vs período anterior</span>
+        </div>
+      </div>
+
+      <!-- Card 2: Média diária -->
+      <div class="card">
+        <div class="card-title">Média / dia</div>
+        <div class="kpi-value" id="kpi-avg">—</div>
+        <div class="kpi-sub">leads por dia no período</div>
+        <div class="kpi-deltas" style="margin-top:8px">
+          <span class="delta" id="kpi-avg-delta">—</span>
+          <span class="delta-label">vs período anterior</span>
+        </div>
+      </div>
+
+      <!-- Card 3: MTD -->
+      <div class="card">
+        <div class="card-title">MTD — mês atual</div>
+        <div class="kpi-value" id="kpi-mtd">—</div>
+        <div class="kpi-sub" id="kpi-mtd-sub">—</div>
+        <div class="kpi-deltas" style="margin-top:8px">
+          <span class="delta" id="kpi-mtd-vs-prev">—</span>
+          <span class="delta-label">vs MTD mês passado</span>
+        </div>
+      </div>
+
+      <!-- Card 4: Meta com barra de progresso -->
+      <div class="card">
+        <div class="card-title">Meta</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Meta do mês</div>
+            <input type="number" id="meta-mes-input" class="meta-input" placeholder="ex: 30000">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Meta do dia</div>
+            <input type="number" id="meta-dia-input" class="meta-input" placeholder="ex: 1000">
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Progresso MTD</div>
+        <div class="progress-wrap"><div class="progress-fill" id="meta-progress-fill" style="width:0%"></div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px">
+          <span id="meta-progress-label" style="color:var(--muted)">Defina a meta acima</span>
+          <strong id="meta-progress-pct">—</strong>
+        </div>
+        <div id="meta-proj-label" style="font-size:10px;color:var(--muted);margin-top:6px"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ BLOCO 2: Volume diário ============ -->
+  <section>
+    <div class="section-title">2 · Volume — como estou no tempo?</div>
+    <div class="card">
+      <div class="card-title">
+        <span id="volume-title">Leads por dia · últimos 30 dias</span>
+        <div class="toolbar">
+          <button class="toggle-btn active" data-vol="daily" onclick="toggleVolumeView('daily')">Diário</button>
+          <button class="toggle-btn" data-vol="cumulative" onclick="toggleVolumeView('cumulative')">MTD cumulativo</button>
+        </div>
+      </div>
+      <div class="chart-box lg"><canvas id="chart-volume"></canvas></div>
+      <div class="legend-inline">
+        <div class="li"><span class="ld" style="background:#2563eb"></span>Leads diários</div>
+        <div class="li"><span class="ld" style="background:#94a3b8;opacity:.6"></span>Baseline</div>
+        <div class="li"><span class="ld" style="background:#10b981;opacity:.6"></span>Meta diária</div>
+        <div class="li"><span class="ld" style="background:#f59e0b"></span>MA7 (média móvel 7d)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BLOCO 3: Canais ============ -->
+  <section>
+    <div class="section-title">3 · Canais — de onde está vindo?</div>
+    <div class="grid grid-2-1">
+      <div class="card">
+        <div class="card-title">Contribuição diária por canal · 30 dias</div>
+        <div class="chart-box"><canvas id="chart-stack"></canvas></div>
+      </div>
+      <div class="card gauge-card">
+        <div class="card-title" style="align-self:flex-start;width:100%">Concentração · risco de dependência</div>
+        <div style="position:relative;width:160px;height:160px;margin-top:8px">
+          <canvas id="chart-concentration" width="160" height="160"></canvas>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+            <div class="concentration-num" id="conc-top1">—</div>
+            <div class="concentration-label">% do canal líder</div>
+          </div>
+        </div>
+        <div class="concentration-leader" id="conc-leader">—</div>
+        <div id="conc-status" style="margin-top:6px"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="card-title">Ranking de canais · período selecionado</div>
+      <div class="chart-box"><canvas id="chart-channel-bar"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ============ BLOCO 4: Diagnóstico ============ -->
+  <section>
+    <div class="section-title">4 · Diagnóstico — onde mexer?</div>
+    <div class="card">
+      <div class="card-title">Heatmap · canal × dia (últimos 30 dias) — verde = forte, vermelho = fraco vs média do canal</div>
+      <div class="chart-box heat"><div id="heatmap"></div></div>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:14px">
+      <div class="card">
+        <div class="card-title">Top UTMs · ranking de aquisição</div>
+        <div class="utm-tabs" id="utm-tabs">
+          <button class="active" data-utm="source">source</button>
+          <button data-utm="medium">medium</button>
+          <button data-utm="campaign">campaign</button>
+          <button data-utm="content">content</button>
+          <button data-utm="term">term</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table id="table-utm">
+            <thead><tr>
+              <th id="utm-col-head">UTM</th><th class="num">Leads</th><th class="num">Share</th><th class="num">Δ vs período anterior</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Top popups e formulários · leads e taxa de cadastro</div>
+        <div style="overflow-x:auto">
+          <table id="table-popups">
+            <thead><tr>
+              <th>Ativo</th><th class="num">Views</th><th class="num">Leads</th><th class="num">Taxa</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- ============ BLOCO 5: Alertas (lateral) ============ -->
+<aside class="alerts-rail">
+  <div class="section-title">5 · Alertas e Anomalias</div>
+  <div id="alerts-list"></div>
+  <div class="alert" style="background:#fafbfd">
+    <h4>📘 Como ler este dashboard</h4>
+    <p>1. <strong>Topo</strong>: bati a meta de ontem?<br>
+       2. <strong>Volume</strong>: pace do mês?<br>
+       3. <strong>Canais</strong>: dependente de algum?<br>
+       4. <strong>Diagnóstico</strong>: o que caiu/subiu?<br>
+       5. <strong>Alertas</strong>: alguma luz acesa?</p>
+  </div>
+</aside>
+</main>
+
+<script>
+// =========================================
+// GLOBALS — preenchidos pelo dashboard_data.json
+// =========================================
+let CHANNELS = [];
+let utmRows  = [];
+let dailyData = [];
+let TODAY, BASELINE, META_DAILY, META_90D;
+
+
+// =========================================
+// HELPERS
+// =========================================
+const fmtInt = v => Math.round(v).toLocaleString('pt-BR');
+
+function sumChannel(ch, rangeOrArr=null){
+  const arr = Array.isArray(rangeOrArr) ? rangeOrArr
+            : rangeOrArr ? dailyData.slice(-rangeOrArr) : dailyData;
+  return arr.reduce((a,d)=>a+(d.channels[ch]||0), 0);
+}
+function sumTotal(rangeOrArr=null){
+  const arr = Array.isArray(rangeOrArr) ? rangeOrArr
+            : rangeOrArr ? dailyData.slice(-rangeOrArr) : dailyData;
+  return arr.reduce((a,d)=>a+d.total, 0);
+}
+
+function getSlice(){
+  const v = document.getElementById('f-period').value;
+  if(v === 'custom'){
+    const s = document.getElementById('f-date-start').value;
+    const e = document.getElementById('f-date-end').value;
+    if(!s || !e) return dailyData;
+    return dailyData.filter(d => d.date >= s && d.date <= e);
+  }
+  if(v === 'mtd'){
+    const t = TODAY;
+    const start = new Date(t.getFullYear(), t.getMonth(), 1).toISOString().slice(0,10);
+    return dailyData.filter(d => d.date >= start);
+  }
+  return dailyData.slice(-parseInt(v));
+}
+
+function getPrevSlice(curr){
+  if(!curr.length) return [];
+  const n = curr.length;
+  const d0 = new Date(curr[0].date + 'T00:00:00');
+  d0.setDate(d0.getDate() - 1);
+  const dStart = new Date(d0);
+  dStart.setDate(dStart.getDate() - n + 1);
+  const ps = dStart.toISOString().slice(0,10);
+  const pe = d0.toISOString().slice(0,10);
+  return dailyData.filter(d => d.date >= ps && d.date <= pe);
+}
+
+function sliceLabel(slice){
+  if(!slice.length) return '';
+  return `${fmtDate(slice[0].date)} – ${fmtDate(slice[slice.length-1].date)} (${slice.length}d)`;
+}
+function median(values){
+  const sorted = [...values].sort((a,b)=>a-b);
+  const m = Math.floor(sorted.length/2);
+  return sorted.length%2===0 ? (sorted[m-1]+sorted[m])/2 : sorted[m];
+}
+function ma(values,window){
+  const result = [];
+  for(let i=0;i<values.length;i++){
+    const start = Math.max(0,i-window+1);
+    const slice = values.slice(start,i+1);
+    result.push(slice.reduce((a,b)=>a+b,0)/slice.length);
+  }
+  return result;
+}
+const fmtPct = v => v.toFixed(1).replace('.',',')+'%';
+const fmtDate = iso => { const d=new Date(iso+'T00:00:00'); return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}); };
+const fmtDateLong = iso => { const d=new Date(iso+'T00:00:00'); return d.toLocaleDateString('pt-BR'); };
+
+function delta(curr, prev){ return prev>0 ? (curr-prev)/prev*100 : 0; }
+function getChannelFilter(){ return document.getElementById('f-channel').value; }
+
+// =========================================
+// 1 · KPIs Topline
+// =========================================
+function fmtDelta(el, d){
+  el.textContent = (d>=0?'▲ +':'▼ ')+Math.abs(d).toFixed(1).replace('.',',')+'%';
+  el.className = 'delta '+(d>=0?'up':'down');
+}
+
+function renderKPIs(){
+  const slice = getSlice();
+  const prev  = getPrevSlice(slice);
+
+  // Card 1 — Leads no período
+  const total  = sumTotal(slice);
+  const totalP = sumTotal(prev);
+  document.getElementById('kpi-period').textContent = fmtInt(total);
+  document.getElementById('kpi-period-sub').textContent = sliceLabel(slice);
+  fmtDelta(document.getElementById('kpi-period-delta'), delta(total, totalP));
+
+  // Card 2 — Média diária
+  const avg  = slice.length ? total / slice.length : 0;
+  const avgP = prev.length  ? totalP / prev.length : 0;
+  document.getElementById('kpi-avg').textContent = fmtInt(Math.round(avg));
+  fmtDelta(document.getElementById('kpi-avg-delta'), delta(avg, avgP));
+
+  // Card 3 — MTD
+  const t = TODAY;
+  const mesStart  = new Date(t.getFullYear(), t.getMonth(), 1).toISOString().slice(0,10);
+  const todayStr  = t.toISOString().slice(0,10);
+  const dayOfMonth = t.getDate();
+  const mtdTotal  = dailyData.filter(d=>d.date>=mesStart && d.date<=todayStr).reduce((a,b)=>a+b.total,0);
+  const pmStart   = new Date(t.getFullYear(), t.getMonth()-1, 1).toISOString().slice(0,10);
+  const pmDay     = new Date(t.getFullYear(), t.getMonth()-1, dayOfMonth).toISOString().slice(0,10);
+  const prevMtd   = dailyData.filter(d=>d.date>=pmStart && d.date<=pmDay).reduce((a,b)=>a+b.total,0);
+  document.getElementById('kpi-mtd').textContent = fmtInt(mtdTotal);
+  document.getElementById('kpi-mtd-sub').textContent = `${dayOfMonth}d do mês · ${fmtInt(Math.round(mtdTotal/dayOfMonth))} leads/dia`;
+  fmtDelta(document.getElementById('kpi-mtd-vs-prev'), delta(mtdTotal, prevMtd));
+
+  // Card 4 — Meta
+  renderMeta(mtdTotal, dayOfMonth);
+}
+
+function renderMeta(mtdTotal, dayOfMonth){
+  const metaMes = parseInt(document.getElementById('meta-mes-input').value) || 0;
+  const pct = metaMes > 0 ? mtdTotal / metaMes * 100 : 0;
+  const pctCapped = Math.min(pct, 100);
+
+  const fill = document.getElementById('meta-progress-fill');
+  fill.style.width = pctCapped.toFixed(1)+'%';
+  fill.style.background = pct>=100 ? '#10b981' : pct>=70 ? '#f59e0b' : '#ef4444';
+
+  document.getElementById('meta-progress-label').textContent = metaMes > 0
+    ? `${fmtInt(mtdTotal)} de ${fmtInt(metaMes)}`
+    : 'Defina a meta acima';
+  document.getElementById('meta-progress-pct').textContent = metaMes > 0
+    ? pct.toFixed(0)+'%' : '—';
+
+  // Projeção fim do mês
+  const diasNoMes = new Date(TODAY.getFullYear(), TODAY.getMonth()+1, 0).getDate();
+  const diasRestantes = diasNoMes - dayOfMonth;
+  const proj = dayOfMonth > 0 ? Math.round(mtdTotal / dayOfMonth * diasNoMes) : 0;
+  document.getElementById('meta-proj-label').textContent = metaMes > 0
+    ? `Projeção: ${fmtInt(proj)} leads · ${diasRestantes}d restantes`
+    : '';
+}
+
+// =========================================
+// 2 · Volume
+// =========================================
+let volumeMode = 'daily';
+function toggleVolumeView(mode){
+  volumeMode = mode;
+  document.querySelectorAll('[data-vol]').forEach(b=>b.classList.toggle('active', b.dataset.vol===mode));
+  renderVolume();
+}
+
+let volumeChart;
+function renderVolume(){
+  const slice = getSlice();
+  const labels = slice.map(d=>fmtDate(d.date));
+  let dailyVals = slice.map(d=>d.total);
+  let baselineVals = slice.map(()=>BASELINE);
+  let metaVals = slice.map(()=>META_DAILY);
+  // MA7 calculada sobre série completa, depois cortada para o período
+  const allMa7 = ma(dailyData.map(d=>d.total),7);
+  const sliceStartIdx = dailyData.indexOf(slice[0]);
+  let ma7Vals = slice.length ? allMa7.slice(sliceStartIdx, sliceStartIdx + slice.length) : [];
+
+  if(volumeMode==='cumulative'){
+    let acc=0; dailyVals = dailyVals.map(v=>acc+=v);
+    let accB=0; baselineVals = baselineVals.map(v=>accB+=v);
+    let accM=0; metaVals = metaVals.map(v=>accM+=v);
+    ma7Vals = null;
+    document.getElementById('volume-title').textContent = `Leads acumulados · ${sliceLabel(slice)}`;
+  } else {
+    document.getElementById('volume-title').textContent = `Leads por dia · ${sliceLabel(slice)}`;
+  }
+
+  if(volumeChart) volumeChart.destroy();
+  const datasets = [
+    {label:'Leads', data:dailyVals, borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,.15)', fill:volumeMode==='cumulative', tension:.3, pointRadius:0, borderWidth:2.5, order:1},
+    {label:'Baseline', data:baselineVals, borderColor:'#94a3b8', borderDash:[6,4], fill:false, pointRadius:0, borderWidth:1.5, order:3},
+    {label:'Meta diária', data:metaVals, borderColor:'#10b981', borderDash:[6,4], fill:false, pointRadius:0, borderWidth:1.5, order:3}
+  ];
+  if(ma7Vals) datasets.push({label:'MA7', data:ma7Vals, borderColor:'#f59e0b', fill:false, pointRadius:0, borderWidth:1.5, tension:.4, order:2});
+
+  volumeChart = new Chart(document.getElementById('chart-volume'), {
+    type:'line',
+    data:{labels, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtInt(Math.round(c.parsed.y))}}
+      },
+      scales:{
+        x:{grid:{display:false}, ticks:{font:{size:10}, maxRotation:0, autoSkip:true, maxTicksLimit:15}},
+        y:{ticks:{callback:v=>fmtInt(v), font:{size:10}}, grid:{color:'#f1f4f8'}}
+      },
+      interaction:{mode:'index', intersect:false}
+    }
+  });
+}
+
+// =========================================
+// 3 · Canais
+// =========================================
+let stackChart, channelBarChart, concChart;
+function renderChannels(){
+  const slice = getSlice();
+  const prev  = getPrevSlice(slice);
+  const labels = slice.map(d=>fmtDate(d.date));
+
+  // Stacked area
+  if(stackChart) stackChart.destroy();
+  stackChart = new Chart(document.getElementById('chart-stack'),{
+    type:'line',
+    data:{
+      labels,
+      datasets: CHANNELS.map(ch=>({
+        label:ch.name,
+        data:slice.map(d=>d.channels[ch.id]||0),
+        backgroundColor:ch.color+'cc',
+        borderColor:ch.color,
+        fill:true, tension:.25, pointRadius:0, borderWidth:1
+      }))
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'bottom', labels:{boxWidth:10, font:{size:10}, padding:8}},
+        tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtInt(c.parsed.y)}}
+      },
+      scales:{
+        x:{grid:{display:false}, ticks:{font:{size:9}, maxRotation:0, autoSkip:true, maxTicksLimit:12}},
+        y:{stacked:true, ticks:{callback:v=>fmtInt(v),font:{size:10}}, grid:{color:'#f1f4f8'}}
+      }
+    }
+  });
+
+  // Bar ranking
+  const channelTotals = CHANNELS.map(ch=>({
+    ...ch, total: sumChannel(ch.id, slice), prev: sumChannel(ch.id, prev)
+  })).sort((a,b)=>b.total-a.total);
+  if(channelBarChart) channelBarChart.destroy();
+  channelBarChart = new Chart(document.getElementById('chart-channel-bar'),{
+    type:'bar',
+    data:{
+      labels: channelTotals.map(c=>c.name),
+      datasets:[{
+        data: channelTotals.map(c=>c.total),
+        backgroundColor: channelTotals.map(c=>c.color),
+        borderRadius:6
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{
+          label:ctx=>{
+            const c = channelTotals[ctx.dataIndex];
+            const d = delta(c.total, c.prev);
+            const share = c.total/sumTotal(slice)*100;
+            return fmtInt(c.total)+' leads · '+share.toFixed(1)+'% share · '+(d>=0?'+':'')+d.toFixed(1)+'% vs período anterior';
+          }
+        }}
+      },
+      scales:{x:{ticks:{callback:v=>fmtInt(v),font:{size:10}},grid:{color:'#f1f4f8'}},y:{grid:{display:false},ticks:{font:{size:10}}}}
+    }
+  });
+
+  // Concentration
+  const top1 = channelTotals[0];
+  const totalP = sumTotal(slice);
+  const top1Pct = top1.total/totalP*100;
+  document.getElementById('conc-top1').textContent = top1Pct.toFixed(0)+'%';
+  document.getElementById('conc-leader').textContent = top1.name;
+  const cs = document.getElementById('conc-status');
+  if(top1Pct >= 60) cs.innerHTML = '<span class="tag tag-red">⚠️ Alta dependência</span>';
+  else if(top1Pct >= 45) cs.innerHTML = '<span class="tag tag-yellow">Atenção · diversificar</span>';
+  else cs.innerHTML = '<span class="tag tag-green">Saudável</span>';
+
+  if(concChart) concChart.destroy();
+  concChart = new Chart(document.getElementById('chart-concentration'),{
+    type:'doughnut',
+    data:{datasets:[{
+      data:[top1Pct, 100-top1Pct],
+      backgroundColor:[top1Pct>=60?'#ef4444':top1Pct>=45?'#f59e0b':'#10b981','#eef2f7'],
+      borderWidth:0
+    }]},
+    options:{responsive:false, maintainAspectRatio:false, cutout:'78%', plugins:{legend:{display:false},tooltip:{enabled:false}}}
+  });
+}
+
+// =========================================
+// 4 · Diagnóstico (Heatmap + UTM + Popups)
+// =========================================
+function renderHeatmap(){
+  const days30 = dailyData.slice(-30);
+  const labels = days30.map(d=>fmtDate(d.date));
+  const grid = document.getElementById('heatmap');
+
+  // Cabeçalho de eixo X (datas)
+  let html = `<div class="heat-grid">`;
+  html += `<div class="heat-row" style="margin-bottom:4px"><div></div><div class="heat-axis" style="grid-template-columns:repeat(30,1fr)">${labels.map((l,i)=>i%3===0?`<div class="heat-axis-cell">${l}</div>`:`<div></div>`).join('')}</div></div>`;
+
+  CHANNELS.forEach(ch=>{
+    const values = days30.map(d=>d.channels[ch.id]||0);
+    const avg = values.reduce((a,b)=>a+b,0)/values.length;
+    html += `<div class="heat-row"><div class="heat-row-label"><span class="channel-dot" style="background:${ch.color}"></span>${ch.name}</div><div class="heat-cells" style="grid-template-columns:repeat(30,1fr)">`;
+    values.forEach((v,i)=>{
+      let bg, txt='#fff';
+      if(v===0){ bg='#fee2e2'; txt='#991b1b'; }
+      else if(avg===0){ bg='#eef2f7'; txt='#475569'; }
+      else {
+        const r = v/avg;
+        if(r>=1.3) bg='#047857';
+        else if(r>=1.1) bg='#10b981';
+        else if(r>=0.9) bg='#34d399';
+        else if(r>=0.7) bg='#fbbf24';
+        else if(r>=0.5) bg='#f59e0b';
+        else bg='#ef4444';
+      }
+      const showVal = v>=10;
+      html += `<div class="heat-cell" style="background:${bg};color:${txt}" title="${ch.name} · ${labels[i]} · ${v} leads">${showVal?v:''}</div>`;
+    });
+    html += `</div></div>`;
+  });
+  html += '</div>';
+  grid.innerHTML = html;
+}
+
+let utmField = 'source';
+function renderUtm(){
+  const ch = getChannelFilter();
+  let filtered = ch==='all' ? utmRows : utmRows.filter(r=>r.channelId===ch);
+  // Agregar por campo
+  const agg = {};
+  filtered.forEach(r=>{
+    const key = r[utmField];
+    if(!agg[key]) agg[key] = {value:key, leads:0, prev:0, channels:new Set()};
+    agg[key].leads += r.leads;
+    agg[key].prev  += r.leadsPrev;
+    agg[key].channels.add(r.channelId);
+  });
+  const list = Object.values(agg).sort((a,b)=>b.leads-a.leads).slice(0,15);
+  const total = list.reduce((a,b)=>a+b.leads,0);
+  document.getElementById('utm-col-head').textContent = 'utm_'+utmField;
+  const tbody = document.querySelector('#table-utm tbody');
+  tbody.innerHTML = list.map(r=>{
+    const d = delta(r.leads, r.prev);
+    const dClass = d>=0?'tag-green':'tag-red';
+    return `<tr>
+      <td><strong>${r.value}</strong> <span style="color:var(--muted);font-size:10px">(${[...r.channels].length} canais)</span></td>
+      <td class="num">${fmtInt(r.leads)}</td>
+      <td class="num">${total>0?(r.leads/total*100).toFixed(1).replace('.',',')+'%':'—'}</td>
+      <td class="num"><span class="tag ${dClass}">${d>=0?'+':''}${d.toFixed(1).replace('.',',')}%</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderPopups(){
+  document.querySelector('#table-popups tbody').innerHTML = `
+    <tr><td colspan="4" style="color:var(--muted);padding:20px;text-align:center;font-style:italic">
+      Dados de formulários e popups serão integrados na próxima fase (base de sessões).
+    </td></tr>`;
+}
+
+// =========================================
+// 5 · Alertas
+// =========================================
+function renderAlerts(){
+  const alerts = [];
+  const today = dailyData[dailyData.length-1];
+  const yest  = dailyData[dailyData.length-2];
+  const ma7Val = ma(dailyData.map(d=>d.total),7).slice(-1)[0];
+
+  // 🔴 Queda > 20% dia anterior
+  const dayDelta = delta(today.total, yest.total);
+  if(dayDelta <= -20){
+    alerts.push({type:'red', title:'Queda forte vs ontem', pill:'-'+Math.abs(dayDelta).toFixed(0)+'%',
+      text:`Leads hoje (${today.total}) caíram mais de 20% em relação a ontem (${yest.total}).`,
+      ctx:'Verificar: status de campanhas, tracking, status do site.'});
+  }
+  // 🔴 Queda > 15% vs MA7
+  const ma7Delta = delta(today.total, ma7Val);
+  if(ma7Delta <= -15 && dayDelta > -20){
+    alerts.push({type:'red', title:'Volume abaixo da média 7d', pill:Math.abs(ma7Delta).toFixed(0)+'% abaixo',
+      text:`Leads hoje (${today.total}) ${Math.abs(ma7Delta).toFixed(0)}% abaixo da MA7 (${Math.round(ma7Val)}).`,
+      ctx:'Provavelmente queda estrutural, não pontual.'});
+  }
+  // 🟡 Top 1 > 60%
+  const totals = CHANNELS.map(ch=>({ch, total:sumChannel(ch.id,7)})).sort((a,b)=>b.total-a.total);
+  const total7 = totals.reduce((a,b)=>a+b.total,0);
+  const top1Pct = total7 > 0 && totals.length > 0 ? totals[0].total/total7*100 : 0;
+  if(top1Pct >= 60){
+    alerts.push({type:'yellow', title:'Dependência alta de canal', pill:top1Pct.toFixed(0)+'%',
+      text:`${totals[0].ch.name} concentra ${top1Pct.toFixed(0)}% dos leads na última semana.`,
+      ctx:'Se esse canal pausar, perde mais da metade do volume. Diversificar.'});
+  }
+  // 🟡 Canal zerado 2+ dias
+  CHANNELS.forEach(ch=>{
+    const last3 = dailyData.slice(-3).map(d=>d.channels[ch.id]||0);
+    if(last3[0]===0 && last3[1]===0){
+      alerts.push({type:'yellow', title:'Canal sem leads', pill:ch.name,
+        text:`${ch.name} sem leads há 2 dias seguidos.`,
+        ctx:'Verificar se campanha foi pausada, tracking quebrado ou ativo desligado.'});
+    }
+  });
+  // 🟢 Outlier positivo
+  if(today.total > ma7Val * 1.5){
+    alerts.push({type:'green', title:'Pico positivo de aquisição', pill:'+'+((today.total/ma7Val-1)*100).toFixed(0)+'%',
+      text:`Leads hoje (${today.total}) 50%+ acima da MA7. Investigar o que aconteceu de bom.`,
+      ctx:'Replicar a ação responsável. Registrar no Log de Ações.'});
+  }
+  // Se nada, mensagem positiva
+  if(alerts.length===0){
+    alerts.push({type:'green', title:'Sem alertas críticos', pill:'OK',
+      text:'Aquisição rodando dentro do esperado.', ctx:'Continue o trabalho.'});
+  }
+
+  document.getElementById('alerts-list').innerHTML = alerts.map(a=>`
+    <div class="alert ${a.type}">
+      <h4>${a.type==='red'?'🔴':a.type==='yellow'?'🟡':'🟢'} ${a.title} <span class="pill">${a.pill}</span></h4>
+      <p>${a.text}</p>
+      <div class="ctx">${a.ctx}</div>
+    </div>
+  `).join('');
+}
+
+// =========================================
+// SETUP & RENDER
+// =========================================
+function populateChannelFilter(){
+  const sel = document.getElementById('f-channel');
+  sel.innerHTML = '<option value="all">Todos os canais</option>' + CHANNELS.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+}
+
+function renderAll(){
+  renderKPIs();
+  renderVolume();
+  renderChannels();
+  renderHeatmap();
+  renderUtm();
+  renderPopups();
+  renderAlerts();
+}
+
+// Meta — persistência e listeners
+function loadMeta(){
+  document.getElementById('meta-mes-input').value = localStorage.getItem('meta_mes') || '';
+  const dia = localStorage.getItem('meta_dia') || '';
+  document.getElementById('meta-dia-input').value = dia;
+  if(dia){
+    META_DAILY = parseInt(dia);
+    document.getElementById('hdr-meta-daily').textContent = fmtInt(parseInt(dia));
+    document.getElementById('hdr-meta-badge').style.display = '';
+  }
+}
+document.getElementById('meta-mes-input').addEventListener('input', ()=>{
+  localStorage.setItem('meta_mes', document.getElementById('meta-mes-input').value);
+  renderKPIs();
+});
+document.getElementById('meta-dia-input').addEventListener('input', ()=>{
+  const val = parseInt(document.getElementById('meta-dia-input').value) || 0;
+  localStorage.setItem('meta_dia', document.getElementById('meta-dia-input').value);
+  if(val){
+    META_DAILY = val;
+    document.getElementById('hdr-meta-daily').textContent = fmtInt(val);
+    document.getElementById('hdr-meta-badge').style.display = '';
+  } else {
+    document.getElementById('hdr-meta-badge').style.display = 'none';
+  }
+  renderVolume();
+});
+
+document.getElementById('f-period').addEventListener('change', ()=>{
+  const isCustom = document.getElementById('f-period').value === 'custom';
+  document.getElementById('wrap-date-start').style.display = isCustom ? '' : 'none';
+  document.getElementById('wrap-date-end').style.display   = isCustom ? '' : 'none';
+  if(!isCustom) renderAll();
+});
+document.getElementById('f-date-start').addEventListener('change', ()=>{
+  if(document.getElementById('f-date-end').value) renderAll();
+});
+document.getElementById('f-date-end').addEventListener('change', ()=>{
+  if(document.getElementById('f-date-start').value) renderAll();
+});
+document.getElementById('f-channel').addEventListener('change', ()=>{ renderUtm(); renderPopups(); });
+document.querySelectorAll('#utm-tabs button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('#utm-tabs button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    utmField = b.dataset.utm;
+    renderUtm();
+  });
+});
+
+// =========================================
+// INIT — carrega dados reais do JSON
+// =========================================
+async function init(){
+  try {
+    const res = await fetch('dashboard_data.json');
+    if(!res.ok) throw new Error('dashboard_data.json não encontrado. Execute: python scripts/gerar_dashboard_data.py');
+    const data = await res.json();
+
+    CHANNELS   = data.channels;
+    dailyData  = data.daily;
+    utmRows    = data.utm_rows;
+    BASELINE   = data.baseline;
+    META_DAILY = data.meta_daily;
+    META_90D   = data.meta_90d;
+
+    // TODAY = último dia com pelo menos 1 lead
+    const lastWithData = [...dailyData].reverse().find(d => d.total > 0);
+    TODAY = lastWithData ? new Date(lastWithData.date + 'T12:00:00') : new Date();
+
+    // Preenche limites dos date pickers com o range disponível nos dados
+    if(dailyData.length){
+      const first = dailyData[0].date;
+      const last  = dailyData[dailyData.length-1].date;
+      const ds = document.getElementById('f-date-start');
+      const de = document.getElementById('f-date-end');
+      ds.min = de.min = first;
+      ds.max = de.max = last;
+      ds.value = first;
+      de.value = last;
+    }
+
+    populateChannelFilter();
+    loadMeta();
+    renderAll();
+  } catch(err) {
+    document.querySelector('main').innerHTML = `
+      <div style="padding:60px;text-align:center;grid-column:1/-1">
+        <div style="font-size:36px;margin-bottom:14px">⚠️</div>
+        <div style="font-size:15px;font-weight:700;color:#ef4444;margin-bottom:10px">${err.message}</div>
+        <div style="font-size:12px;color:#6b7785;line-height:1.8">
+          1. Certifique-se de que o servidor local está rodando<br>
+          2. Gere os dados: <code style="background:#f1f4f8;padding:2px 8px;border-radius:4px">python scripts/gerar_dashboard_data.py</code><br>
+          3. Abrindo direto pelo navegador (file://) não funciona — use <code style="background:#f1f4f8;padding:2px 8px;border-radius:4px">python -m http.server 8080</code>
+        </div>
+      </div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
